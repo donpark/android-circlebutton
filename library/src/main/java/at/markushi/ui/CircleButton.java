@@ -12,7 +12,7 @@ import android.widget.ImageView;
 
 import at.markushi.circlebutton.R;
 
-public class CircleButton extends ImageView {
+public class CircleButton extends ImageButton {
 
 	private static final int PRESSED_COLOR_LIGHTUP = 255 / 25;
 	private static final int PRESSED_RING_ALPHA = 75;
@@ -33,6 +33,9 @@ public class CircleButton extends ImageView {
 	private int defaultColor = Color.BLACK;
 	private int pressedColor;
 	private ObjectAnimator pressedAnimator;
+
+    private String text;
+    private Paint textPaint;
 
 	public CircleButton(Context context) {
 		super(context);
@@ -68,6 +71,10 @@ public class CircleButton extends ImageView {
 	protected void onDraw(Canvas canvas) {
 		canvas.drawCircle(centerX, centerY, pressedRingRadius + animationProgress, focusPaint);
 		canvas.drawCircle(centerX, centerY, outerRadius - pressedRingWidth, circlePaint);
+        if (textPaint != null) {
+            final float baselineOffset = (textPaint.descent() + textPaint.ascent()) / 2;
+            canvas.drawText(text, centerX, centerY - baselineOffset, textPaint);
+        }
 		super.onDraw(canvas);
 	}
 
@@ -125,14 +132,23 @@ public class CircleButton extends ImageView {
 				.getDisplayMetrics());
 
 		int color = Color.BLACK;
-		if (attrs != null) {
-			final TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.CircleButton);
-			color = a.getColor(R.styleable.CircleButton_cb_color, color);
-			pressedRingWidth = (int) a.getDimension(R.styleable.CircleButton_cb_pressedRingWidth, pressedRingWidth);
-			a.recycle();
-		}
+        float textSize = 22.0f;
+        int textColor = Color.WHITE;
+        if (attrs != null) {
+            final TypedArray a = context.obtainStyledAttributes(attrs, ATTRS);
+            color = a.getColor(attrValueIndex(R.attr.cb_color), color);
+            pressedRingWidth = (int) a.getDimension(attrValueIndex(R.attr.cb_pressedRingWidth), pressedRingWidth);
+            this.text = a.getString(attrValueIndex(android.R.attr.text));
+            textSize = a.getDimension(attrValueIndex(android.R.attr.textSize), textSize);
+            textColor = a.getColor(attrValueIndex(android.R.attr.textColor), textColor);
+            a.recycle();
+        }
 
-		setColor(color);
+        setColor(color);
+
+        if (this.text != null) {
+            setText(text, textSize, textColor);
+        }
 
 		focusPaint.setStrokeWidth(pressedRingWidth);
 		final int pressedAnimationTime = getResources().getInteger(ANIMATION_TIME_ID);
@@ -144,4 +160,41 @@ public class CircleButton extends ImageView {
 		return Color.argb(Math.min(255, Color.alpha(color)), Math.min(255, Color.red(color) + amount),
 				Math.min(255, Color.green(color) + amount), Math.min(255, Color.blue(color) + amount));
 	}
+
+    private static final int[] ATTRS = new int[]{
+            android.R.attr.text,
+            android.R.attr.textColor,
+            android.R.attr.textSize,
+            R.attr.cb_color,
+            R.attr.cb_pressedRingWidth
+    };
+
+    static {
+        Arrays.sort(ATTRS);
+    }
+
+    private static int attrValueIndex(int attrIndex) {
+        for (int i = 0; i < ATTRS.length; i++) {
+            if (ATTRS[i] == attrIndex) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    public String getText() {
+        return this.text;
+    }
+
+    public void setText(String text, float textSize, int textColor) {
+        this.textPaint = new Paint();
+        textPaint.setColor(textColor);
+        textPaint.setTextSize(textSize);
+        textPaint.setAntiAlias(true);
+        textPaint.setFakeBoldText(true);
+        textPaint.setStyle(Paint.Style.FILL);
+        textPaint.setTextAlign(Paint.Align.CENTER);
+
+        this.invalidate();
+    }
 }
